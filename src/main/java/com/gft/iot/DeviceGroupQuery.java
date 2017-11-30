@@ -1,6 +1,5 @@
 package com.gft.iot;
 
-import com.gft.iot.DeviceGroup.*;
 import akka.actor.ActorRef;
 import akka.actor.AbstractActor;
 import akka.actor.Cancellable;

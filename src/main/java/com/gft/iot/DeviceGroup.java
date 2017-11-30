@@ -7,10 +7,12 @@ import akka.actor.Props;
 import akka.actor.Terminated;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+import scala.concurrent.duration.FiniteDuration;
 
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 public class DeviceGroup extends AbstractActor {
     private final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
@@ -71,15 +73,41 @@ public class DeviceGroup extends AbstractActor {
         public Temperature(double value) {
             this.value = value;
         }
+        
+         public boolean equals(Object o){
+            if(o == null)                return false;
+            if(!(o instanceof Temperature)) return false;
+        
+            Temperature other = (Temperature) o;
+            return this.value == other.value;
+          }
     }
 
     public static final class TemperatureNotAvailable implements TemperatureReading {
+        public boolean equals(Object o){
+            if(o == null)                return false;
+            if(!(o instanceof TemperatureNotAvailable)) return false;
+        
+            return true;
+          }
     }
 
     public static final class DeviceNotAvailable implements TemperatureReading {
+        public boolean equals(Object o){
+            if(o == null)                return false;
+            if(!(o instanceof DeviceNotAvailable)) return false;
+        
+            return true;
+          }
     }
 
     public static final class DeviceTimedOut implements TemperatureReading {
+        public boolean equals(Object o){
+            if(o == null)                return false;
+            if(!(o instanceof DeviceTimedOut)) return false;
+        
+            return true;
+          }
     }
 
     // END Message Protocol Definition
@@ -127,9 +155,17 @@ public class DeviceGroup extends AbstractActor {
         deviceIdToActor.remove(deviceId);
     }
 
+    private void onAllTemperatures(RequestAllTemperatures r) {
+        getContext().actorOf(DeviceGroupQuery.props(
+                actorToDeviceId, r.requestId, getSender(), new FiniteDuration(3, TimeUnit.SECONDS)));
+    }
+    
     @Override
     public Receive createReceive() {
         return receiveBuilder().match(DeviceManager.RequestTrackDevice.class, this::onTrackDevice)
-                               .match(RequestDeviceList.class, this::onDeviceList).match(Terminated.class, this::onTerminated).build();
+                               .match(RequestDeviceList.class, this::onDeviceList)
+                               .match(Terminated.class, this::onTerminated)
+                               .match(RequestAllTemperatures.class, this::onAllTemperatures)
+                               .build();
     }
 }
